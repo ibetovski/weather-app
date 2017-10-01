@@ -1,0 +1,55 @@
+body {
+  font-family: Arial, sans-serif;
+}
+
+h3 {
+  font-weight: normal;
+}
+
+h3, p {
+  margin: 0;
+}
+
+.one-day {
+  background: #d1dfea;
+  border-left: 1px dashed white;
+  border-bottom: 1px dashed white;
+  color: black;
+  float: left;
+  width: 200px;
+  height: 200px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.one-day:hover {
+  transition: color .3s, background .3s;
+  background: #c2d5e3;
+}
+
+.one-day img {
+  float: left;
+}
+
+.one-day h3.temp {
+  float: right;
+  padding: 5px;
+  font-size: 28px;
+}
+
+.one-day .temperature {
+  float: left;
+  width: 100%;
+}
+
+.one-day p {
+  margin: 5px 0;
+}
+
+.temp-min {
+  color: #686ebb;
+}
+
+.temp-max {
+  color: #bb6897;
+}

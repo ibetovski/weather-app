@@ -9,7 +9,6 @@ let WeatherAPI  = require('../lib/weather-api')
 
 // the fake response is taken from https://openweathermap.org/forecast5
 let fakeResponse = {
-  "city": {
     "id": 1851632,
     "name": "Shuzenji",
     "coord": {
@@ -50,7 +49,6 @@ let fakeResponse = {
       },
       "dt_txt": "2014-07-23 09:00:00"
     }]
-  }
 }
 
 describe('Weather API', () => {
@@ -72,18 +70,21 @@ describe('Weather API', () => {
   }
 
   function stubExpiredCache(isExpired) {
-    if (typeof weatherApi.isCacheExprited.restore === 'function') {
-      weatherApi.isCacheExprited.restore()
+    if (typeof weatherApi.isCacheExpired.restore === 'function') {
+      weatherApi.isCacheExpired.restore()
     }
 
-    sinon.stub(weatherApi, 'isCacheExprited').returns(isExpired)
+    sinon.stub(weatherApi, 'isCacheExpired').returns(isExpired)
   }
 
   beforeEach(() => {
     // for all tests make the class to be initialized as expected to be working
     // we will test the init required params in a new instace
     weatherApi = new WeatherAPI('key123')
-    sinon.stub(curlrequest, 'request').returns(Promise.resolve(fakeResponse))
+    let curlStub = sinon.stub(curlrequest, 'request')
+    curlStub.callsFake((options, cb) => {
+      cb(null, JSON.stringify(fakeResponse))
+    })
     // Faking the fs. methods to act in the happy scenario.
     // we want to write a file
     // and we want to read a file.
@@ -103,8 +104,8 @@ describe('Weather API', () => {
   })
 
   afterEach(() => {
-    if (typeof weatherApi.isCacheExprited.restore === 'function') {
-      weatherApi.isCacheExprited.restore()
+    if (typeof weatherApi.isCacheExpired.restore === 'function') {
+      weatherApi.isCacheExpired.restore()
     }
 
     weatherApi = null
@@ -169,4 +170,558 @@ describe('Weather API', () => {
     await weatherApi.get(123)
     sinon.assert.called(curlrequest.request)
   })
+
+  it('should not override the cache if the response is with error', (done) => {
+    stubStats(true)
+    stubExpiredCache(true)
+
+    curlrequest.request.restore()
+    let curlStub = sinon.stub(curlrequest, 'request')
+    curlStub.callsFake((options, cb) => {
+      cb(null, {
+        "cod": 401,
+        "message": "Invalid API key. Please see http://openweathermap.org/faq#error401 for more info."
+      });
+    })
+
+    weatherApi.get(123)
+    .catch((e) => {
+      sinon.assert.notCalled(fs.writeFile)
+      done();
+    })
+  })
+
+  it('should reduce the data from 8 elements and get min and max temperatures', function() {
+    let listToReduce = [{
+      "dt": 1506902400,
+      "main": {
+        "temp": 275.5,
+        "temp_min": 275.063,
+        "temp_max": 275.5,
+        "pressure": 941.89,
+        "sea_level": 1040.17,
+        "grnd_level": 941.89,
+        "humidity": 94,
+        "temp_kf": 0.44
+      },
+      "weather": [{
+        "id": 801,
+        "main": "Clouds",
+        "description": "few clouds",
+        "icon": "02n"
+      }],
+      "clouds": {
+        "all": 20
+      },
+      "wind": {
+        "speed": 1.12,
+        "deg": 92.0031
+      },
+      "rain": {},
+      "sys": {
+        "pod": "n"
+      },
+      "dt_txt": "2017-10-02 00:00:00"
+      }, {
+        "dt": 1506913200,
+        "main": {
+          "temp": 274.473,
+          "temp_min": 274.473,
+          "temp_max": 274.473,
+          "pressure": 941.85,
+          "sea_level": 1040.53,
+          "grnd_level": 941.85,
+          "humidity": 100,
+          "temp_kf": 0
+        },
+        "weather": [{
+          "id": 801,
+          "main": "Clouds",
+          "description": "few clouds",
+          "icon": "02n"
+        }],
+        "clouds": {
+          "all": 20
+        },
+        "wind": {
+          "speed": 1.16,
+          "deg": 113.5
+        },
+        "rain": {},
+        "sys": {
+          "pod": "n"
+        },
+        "dt_txt": "2017-10-02 03:00:00"
+      }, {
+        "dt": 1506924000,
+        "main": {
+          "temp": 278.148,
+          "temp_min": 278.148,
+          "temp_max": 278.148,
+          "pressure": 942.47,
+          "sea_level": 1041.11,
+          "grnd_level": 942.47,
+          "humidity": 98,
+          "temp_kf": 0
+        },
+        "weather": [{
+          "id": 500,
+          "main": "Rain",
+          "description": "light rain",
+          "icon": "10d"
+        }],
+        "clouds": {
+          "all": 24
+        },
+        "wind": {
+          "speed": 1.16,
+          "deg": 128.009
+        },
+        "rain": {
+          "3h": 0.005
+        },
+        "sys": {
+          "pod": "d"
+        },
+        "dt_txt": "2017-10-02 06:00:00"
+      }, {
+        "dt": 1506934800,
+        "main": {
+          "temp": 285.882,
+          "temp_min": 285.882,
+          "temp_max": 285.882,
+          "pressure": 942.88,
+          "sea_level": 1039.98,
+          "grnd_level": 942.88,
+          "humidity": 77,
+          "temp_kf": 0
+        },
+        "weather": [{
+          "id": 800,
+          "main": "Clear",
+          "description": "clear sky",
+          "icon": "01d"
+        }],
+        "clouds": {
+          "all": 0
+        },
+        "wind": {
+          "speed": 1.62,
+          "deg": 51.001
+        },
+        "rain": {},
+        "sys": {
+          "pod": "d"
+        },
+        "dt_txt": "2017-10-02 09:00:00"
+      }, {
+        "dt": 1506945600,
+        "main": {
+          "temp": 288.452,
+          "temp_min": 288.452,
+          "temp_max": 288.452,
+          "pressure": 942.03,
+          "sea_level": 1038.2,
+          "grnd_level": 942.03,
+          "humidity": 67,
+          "temp_kf": 0
+        },
+        "weather": [{
+          "id": 800,
+          "main": "Clear",
+          "description": "clear sky",
+          "icon": "01d"
+        }],
+        "clouds": {
+          "all": 0
+        },
+        "wind": {
+          "speed": 1.57,
+          "deg": 26.506
+        },
+        "rain": {},
+        "sys": {
+          "pod": "d"
+        },
+        "dt_txt": "2017-10-02 12:00:00"
+      }, {
+        "dt": 1506956400,
+        "main": {
+          "temp": 287.556,
+          "temp_min": 287.556,
+          "temp_max": 287.556,
+          "pressure": 941.41,
+          "sea_level": 1037.66,
+          "grnd_level": 941.41,
+          "humidity": 64,
+          "temp_kf": 0
+        },
+        "weather": [{
+          "id": 800,
+          "main": "Clear",
+          "description": "clear sky",
+          "icon": "01d"
+        }],
+        "clouds": {
+          "all": 0
+        },
+        "wind": {
+          "speed": 1.41,
+          "deg": 41.5012
+        },
+        "rain": {},
+        "sys": {
+          "pod": "d"
+        },
+        "dt_txt": "2017-10-02 15:00:00"
+      }, {
+        "dt": 1506967200,
+        "main": {
+          "temp": 280.461,
+          "temp_min": 280.461,
+          "temp_max": 280.461,
+          "pressure": 942.05,
+          "sea_level": 1039.19,
+          "grnd_level": 942.05,
+          "humidity": 91,
+          "temp_kf": 0
+        },
+        "weather": [{
+          "id": 801,
+          "main": "Clouds",
+          "description": "few clouds",
+          "icon": "02n"
+        }],
+        "clouds": {
+          "all": 12
+        },
+        "wind": {
+          "speed": 1.16,
+          "deg": 59.0041
+        },
+        "rain": {},
+        "sys": {
+          "pod": "n"
+        },
+        "dt_txt": "2017-10-02 18:00:00"
+      }, {
+        "dt": 1506978000,
+        "main": {
+          "temp": 276.83,
+          "temp_min": 276.83,
+          "temp_max": 276.83,
+          "pressure": 942.31,
+          "sea_level": 1040.06,
+          "grnd_level": 942.31,
+          "humidity": 93,
+          "temp_kf": 0
+        },
+        "weather": [{
+          "id": 800,
+          "main": "Clear",
+          "description": "clear sky",
+          "icon": "01n"
+        }],
+        "clouds": {
+          "all": 0
+        },
+        "wind": {
+          "speed": 1.31,
+          "deg": 107.501
+        },
+        "rain": {},
+        "sys": {
+          "pod": "n"
+        },
+        "dt_txt": "2017-10-02 21:00:00"
+    }]
+
+    // split the data per date
+    let res = weatherApi.reduce(listToReduce);
+    expect(res).to.have.lengthOf(1);
+    expect(res[0].temp_min).to.equal(274.473);
+    expect(res[0].temp_max).to.equal(288.452);
+  });
+
+  it('should group by date when reducing', function() {
+    let listToReduce = [{
+      "dt": 1506902400,
+      "main": {
+        "temp": 275.5,
+        "temp_min": 275.063,
+        "temp_max": 275.5,
+        "pressure": 941.89,
+        "sea_level": 1040.17,
+        "grnd_level": 941.89,
+        "humidity": 94,
+        "temp_kf": 0.44
+      },
+      "weather": [{
+        "id": 801,
+        "main": "Clouds",
+        "description": "few clouds",
+        "icon": "02n"
+      }],
+      "clouds": {
+        "all": 20
+      },
+      "wind": {
+        "speed": 1.12,
+        "deg": 92.0031
+      },
+      "rain": {},
+      "sys": {
+        "pod": "n"
+      },
+      "dt_txt": "2017-10-02 00:00:00"
+      }, {
+        "dt": 1506913200,
+        "main": {
+          "temp": 274.473,
+          "temp_min": 274.473,
+          "temp_max": 274.473,
+          "pressure": 941.85,
+          "sea_level": 1040.53,
+          "grnd_level": 941.85,
+          "humidity": 100,
+          "temp_kf": 0
+        },
+        "weather": [{
+          "id": 801,
+          "main": "Clouds",
+          "description": "few clouds",
+          "icon": "02n"
+        }],
+        "clouds": {
+          "all": 20
+        },
+        "wind": {
+          "speed": 1.16,
+          "deg": 113.5
+        },
+        "rain": {},
+        "sys": {
+          "pod": "n"
+        },
+        "dt_txt": "2017-10-02 03:00:00"
+      }, {
+        "dt": 1506924000,
+        "main": {
+          "temp": 278.148,
+          "temp_min": 278.148,
+          "temp_max": 278.148,
+          "pressure": 942.47,
+          "sea_level": 1041.11,
+          "grnd_level": 942.47,
+          "humidity": 98,
+          "temp_kf": 0
+        },
+        "weather": [{
+          "id": 500,
+          "main": "Rain",
+          "description": "light rain",
+          "icon": "10d"
+        }],
+        "clouds": {
+          "all": 24
+        },
+        "wind": {
+          "speed": 1.16,
+          "deg": 128.009
+        },
+        "rain": {
+          "3h": 0.005
+        },
+        "sys": {
+          "pod": "d"
+        },
+        "dt_txt": "2017-10-02 06:00:00"
+      }, {
+        "dt": 1506934800,
+        "main": {
+          "temp": 285.882,
+          "temp_min": 285.882,
+          "temp_max": 285.882,
+          "pressure": 942.88,
+          "sea_level": 1039.98,
+          "grnd_level": 942.88,
+          "humidity": 77,
+          "temp_kf": 0
+        },
+        "weather": [{
+          "id": 800,
+          "main": "Clear",
+          "description": "clear sky",
+          "icon": "01d"
+        }],
+        "clouds": {
+          "all": 0
+        },
+        "wind": {
+          "speed": 1.62,
+          "deg": 51.001
+        },
+        "rain": {},
+        "sys": {
+          "pod": "d"
+        },
+        "dt_txt": "2017-10-02 09:00:00"
+      }, {
+        "dt": 1506945600,
+        "main": {
+          "temp": 288.452,
+          "temp_min": 288.452,
+          "temp_max": 288.452,
+          "pressure": 942.03,
+          "sea_level": 1038.2,
+          "grnd_level": 942.03,
+          "humidity": 67,
+          "temp_kf": 0
+        },
+        "weather": [{
+          "id": 800,
+          "main": "Clear",
+          "description": "clear sky",
+          "icon": "01d"
+        }],
+        "clouds": {
+          "all": 0
+        },
+        "wind": {
+          "speed": 1.57,
+          "deg": 26.506
+        },
+        "rain": {},
+        "sys": {
+          "pod": "d"
+        },
+        "dt_txt": "2017-10-02 12:00:00"
+      }, {
+        "dt": 1506956400,
+        "main": {
+          "temp": 287.556,
+          "temp_min": 287.556,
+          "temp_max": 287.556,
+          "pressure": 941.41,
+          "sea_level": 1037.66,
+          "grnd_level": 941.41,
+          "humidity": 64,
+          "temp_kf": 0
+        },
+        "weather": [{
+          "id": 800,
+          "main": "Clear",
+          "description": "clear sky",
+          "icon": "01d"
+        }],
+        "clouds": {
+          "all": 0
+        },
+        "wind": {
+          "speed": 1.41,
+          "deg": 41.5012
+        },
+        "rain": {},
+        "sys": {
+          "pod": "d"
+        },
+        "dt_txt": "2017-10-02 15:00:00"
+      }, {
+        "dt": 1506967200,
+        "main": {
+          "temp": 280.461,
+          "temp_min": 280.461,
+          "temp_max": 280.461,
+          "pressure": 942.05,
+          "sea_level": 1039.19,
+          "grnd_level": 942.05,
+          "humidity": 91,
+          "temp_kf": 0
+        },
+        "weather": [{
+          "id": 801,
+          "main": "Clouds",
+          "description": "few clouds",
+          "icon": "02n"
+        }],
+        "clouds": {
+          "all": 12
+        },
+        "wind": {
+          "speed": 1.16,
+          "deg": 59.0041
+        },
+        "rain": {},
+        "sys": {
+          "pod": "n"
+        },
+        "dt_txt": "2017-10-02 18:00:00"
+      }, {
+        "dt": 1506978000,
+        "main": {
+          "temp": 276.83,
+          "temp_min": 276.83,
+          "temp_max": 276.83,
+          "pressure": 942.31,
+          "sea_level": 1040.06,
+          "grnd_level": 942.31,
+          "humidity": 93,
+          "temp_kf": 0
+        },
+        "weather": [{
+          "id": 800,
+          "main": "Clear",
+          "description": "clear sky",
+          "icon": "01n"
+        }],
+        "clouds": {
+          "all": 0
+        },
+        "wind": {
+          "speed": 1.31,
+          "deg": 107.501
+        },
+        "rain": {},
+        "sys": {
+          "pod": "n"
+        },
+        "dt_txt": "2017-10-02 21:00:00"
+    }, {
+      "dt": 1507291200,
+      "main": {
+        "temp": 288.745,
+        "temp_min": 288.745,
+        "temp_max": 288.745,
+        "pressure": 937.77,
+        "sea_level": 1033.14,
+        "grnd_level": 937.77,
+        "humidity": 60,
+        "temp_kf": 0
+      },
+      "weather": [{
+        "id": 800,
+        "main": "Clear",
+        "description": "clear sky",
+        "icon": "01d"
+      }],
+      "clouds": {
+        "all": 0
+      },
+      "wind": {
+        "speed": 1.62,
+        "deg": 316.504
+      },
+      "rain": {},
+      "sys": {
+        "pod": "d"
+      },
+      "dt_txt": "2017-10-06 12:00:00"
+    }]
+    
+    // split the data per date
+    let res = weatherApi.reduce(listToReduce);
+    expect(res).to.have.lengthOf(2);
+    expect(res[1].temp_min).to.equal(288.745);
+    expect(res[1].temp_max).to.equal(288.745);
+  });
 })
