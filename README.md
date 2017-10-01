@@ -67,4 +67,4 @@ Run:
 ```bash
 npm test
 ```
-*No HTTP requests and no file where harmed during the unit tests execution (They are fully isolated by stubing the curlrequest and fs methods)*
+*No HTTP requests and no files were harmed during the unit tests execution (They are fully isolated by stubing the curlrequest and fs methods)*
