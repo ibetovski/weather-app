@@ -11,8 +11,11 @@ export WEATHER_APP_KEY=you_app_key
 After you have the environment variable. You can start the web server with:
 
 ```bash
+npm install
 node index.js
 ```
+
+Open `http://localhost:8181` in your browser
 
 ### Web server Api
 
